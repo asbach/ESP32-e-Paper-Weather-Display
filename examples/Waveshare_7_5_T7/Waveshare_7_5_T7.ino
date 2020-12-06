@@ -73,7 +73,7 @@ U8G2_FOR_ADAFRUIT_GFX u8g2Fonts;  // Select u8g2 font from here: https://github.
 // u8g2_font_helvB24_tf
 
 //################  VERSION  ###########################################
-String version = "16.9";     // Programme version, see change log at end
+String version = "16.11";    // Programme version, see change log at end
 //################ VARIABLES ###########################################
 
 boolean LargeIcon = true, SmallIcon = false;
@@ -268,7 +268,7 @@ void DisplayForecastWeather(int x, int y, int index) {
   display.drawRect(x, y, fwidth - 1, 81, GxEPD_BLACK);
   display.drawLine(x, y + 16, x + fwidth - 3, y + 16, GxEPD_BLACK);
   DisplayConditionsSection(x + fwidth / 2, y + 43, WxForecast[index].Icon, SmallIcon);
-  drawString(x + fwidth / 2, y + 4, String(WxForecast[index].Period.substring(11, 16)), CENTER);
+  drawString(x + fwidth / 2, y + 4, String(ConvertUnixTime(WxForecast[index].Dt + WxConditions[0].Timezone).substring(0,5)), CENTER);
   drawString(x + fwidth / 2 + 12, y + 66, String(WxForecast[index].High, 0) + "°/" + String(WxForecast[index].Low, 0) + "°", CENTER);
 }
 //#########################################################################################
@@ -294,7 +294,7 @@ void DisplayPrecipitationSection(int x, int y, int pwidth, int pdepth) {
   drawString(x + 25, y + 5, TXT_PRECIPITATION_SOON, CENTER);
   u8g2Fonts.setFont(u8g2_font_helvB12_tf);
   if (WxForecast[1].Rainfall >= 0.005) { // Ignore small amounts
-    drawString(x - 25, y + 3, String(WxForecast[1].Rainfall, 2) + (Units == "M" ? "mm" : "in"), LEFT); // Only display rainfall total today if > 0
+    drawString(x - 25, y + 40, String(WxForecast[1].Rainfall, 2) + (Units == "M" ? "mm" : "in"), LEFT); // Only display rainfall total today if > 0
     addraindrop(x + 58, y + 40, 7);
   }
   if (WxForecast[1].Snowfall >= 0.005)  // Ignore small amounts
@@ -863,8 +863,8 @@ void Nodata(int x, int y, bool IconSize, String IconName) {
 void DrawGraph(int x_pos, int y_pos, int gwidth, int gheight, float Y1Min, float Y1Max, String title, float DataArray[], int readings, boolean auto_scale, boolean barchart_mode) {
 #define auto_scale_margin 0 // Sets the autoscale increment, so axis steps up in units of e.g. 3
 #define y_minor_axis 5      // 5 y-axis division markers
-  int maxYscale = -10000;
-  int minYscale =  10000;
+  float maxYscale = -10000;
+  float minYscale =  10000;
   int last_x, last_y;
   float x2, y2;
   if (auto_scale == true) {
@@ -901,14 +901,14 @@ void DrawGraph(int x_pos, int y_pos, int gwidth, int gheight, float Y1Min, float
       if (spacing < y_minor_axis) display.drawFastHLine((x_pos + 3 + j * gwidth / number_of_dashes), y_pos + (gheight * spacing / y_minor_axis), gwidth / (2 * number_of_dashes), GxEPD_BLACK);
     }
     if ((Y1Max - (float)(Y1Max - Y1Min) / y_minor_axis * spacing) < 5 || title == TXT_PRESSURE_IN) {
-      drawString(x_pos, y_pos + gheight * spacing / y_minor_axis - 5, String((Y1Max - (float)(Y1Max - Y1Min) / y_minor_axis * spacing + 0.01), 1), RIGHT);
+      drawString(x_pos - 1, y_pos + gheight * spacing / y_minor_axis - 5, String((Y1Max - (float)(Y1Max - Y1Min) / y_minor_axis * spacing + 0.01), 1), RIGHT);
     }
     else
     {
       if (Y1Min < 1 && Y1Max < 10)
-        drawString(x_pos - 3, y_pos + gheight * spacing / y_minor_axis - 5, String((Y1Max - (float)(Y1Max - Y1Min) / y_minor_axis * spacing + 0.01), 1), RIGHT);
+        drawString(x_pos - 1, y_pos + gheight * spacing / y_minor_axis - 5, String((Y1Max - (float)(Y1Max - Y1Min) / y_minor_axis * spacing + 0.01), 1), RIGHT);
       else
-        drawString(x_pos - 3, y_pos + gheight * spacing / y_minor_axis - 5, String((Y1Max - (float)(Y1Max - Y1Min) / y_minor_axis * spacing + 0.01), 0), RIGHT);
+        drawString(x_pos - 2, y_pos + gheight * spacing / y_minor_axis - 5, String((Y1Max - (float)(Y1Max - Y1Min) / y_minor_axis * spacing + 0.01), 0), RIGHT);
     }
   }
   for (int i = 0; i <= 2; i++) {
@@ -951,7 +951,7 @@ void drawStringMaxWidth(int x, int y, unsigned int text_width, String text, alig
 }
 //#########################################################################################
 void InitialiseDisplay() {
-  display.init(0);
+  display.init(115200, true, 2); // init(uint32_t serial_diag_bitrate, bool initial, uint16_t reset_duration, bool pulldown_rst_mode)
   SPI.end();
   SPI.begin(EPD_SCK, EPD_MISO, EPD_MOSI, EPD_CS);
   u8g2Fonts.begin(display); // connect u8g2 procedures to Adafruit GFX
@@ -1036,4 +1036,13 @@ void InitialiseDisplay() {
    
   Version 16.9
    1. Added probability of precipitation display e.g. 17%
+
+  Version 16.10
+   1. Updated display inittialisation for 7.5" T7 display type, which iss now the standard 7.5" display type.
+  
+  Version 16.11
+   1. Adjusted graph drawing for negative numbers
+   2. Correct offset error for precipitation 
+ 
 */
+

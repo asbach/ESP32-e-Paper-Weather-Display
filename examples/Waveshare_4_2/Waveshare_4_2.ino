@@ -72,7 +72,7 @@ U8G2_FOR_ADAFRUIT_GFX u8g2Fonts;  // Select u8g2 font from here: https://github.
 // u8g2_font_helvB24_tf
 
 //################  VERSION  ##########################
-String version = "12.3";     // Version of this program
+String version = "12.4";     // Version of this program
 //################ VARIABLES ###########################
 
 boolean LargeIcon = true, SmallIcon = false;
@@ -212,7 +212,7 @@ void DrawForecastWeather(int x, int y, int index) {
   display.drawRect(x, y, 55, 65, GxEPD_BLACK);
   display.drawLine(x + 1, y + 13, x + 54, y + 13, GxEPD_BLACK);
   DisplayWXicon(x + 28, y + 35, WxForecast[index].Icon, SmallIcon);
-  drawString(x + 31, y + 3, String(WxForecast[index].Period.substring(11, 16)), CENTER);
+  drawString(x + 31, y + 3, String(ConvertUnixTime(WxForecast[index].Dt + WxConditions[0].Timezone).substring(0,5)), CENTER);
   drawString(x + 41, y + 52, String(WxForecast[index].High, 0) + "° / " + String(WxForecast[index].Low, 0) + "°", CENTER);
 }
 //#########################################################################################
@@ -800,8 +800,8 @@ void DrawBattery(int x, int y) {
 void DrawGraph(int x_pos, int y_pos, int gwidth, int gheight, float Y1Min, float Y1Max, String title, float DataArray[], int readings, boolean auto_scale, boolean barchart_mode) {
 #define auto_scale_margin 0 // Sets the autoscale increment, so axis steps up in units of e.g. 3
 #define y_minor_axis 5      // 5 y-axis division markers
-  int maxYscale = -10000;
-  int minYscale =  10000;
+  float maxYscale = -10000;
+  float minYscale =  10000;
   int last_x, last_y;
   float x1, y1, x2, y2;
   if (auto_scale == true) {
@@ -916,4 +916,7 @@ void InitialiseDisplay() {
 
   Version 12.3
   1. Added 20-secs to allow for slow ESP32 RTC timers
+  
+  Version 12.4
+  1. Improved graph drawing function for negative numbers Line 808
 */

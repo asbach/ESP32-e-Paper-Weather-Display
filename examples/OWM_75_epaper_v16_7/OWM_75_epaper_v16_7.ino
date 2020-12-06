@@ -60,7 +60,7 @@ U8G2_FOR_ADAFRUIT_GFX u8g2Fonts;  // Select u8g2 font from here: https://github.
 // u8g2_font_helvB24_tf
 
 //################  VERSION  ###########################################
-String version = "16.7";     // Programme version, see change log at end
+String version = "16.8";     // Programme version, see change log at end
 //################ VARIABLES ###########################################
 
 boolean LargeIcon = true, SmallIcon = false;
@@ -880,8 +880,8 @@ void Nodata(int x, int y, bool IconSize, String IconName) {
 void DrawGraph(int x_pos, int y_pos, int gwidth, int gheight, float Y1Min, float Y1Max, String title, float DataArray[], int readings, boolean auto_scale, boolean barchart_mode) {
 #define auto_scale_margin 0 // Sets the autoscale increment, so axis steps up in units of e.g. 3
 #define y_minor_axis 5      // 5 y-axis division markers
-  int maxYscale = -10000;
-  int minYscale =  10000;
+  float maxYscale = -10000;
+  float minYscale =  10000;
   int last_x, last_y;
   float x2, y2;
   if (auto_scale == true) {
@@ -1073,5 +1073,6 @@ void VerboseRecordOfResetReason(RESET_REASON reason) {
 
   Version 16.8
   1. Updated to resolve changes in GxEPD2 setfont command, removed 'FONT(' and renamed helv08tf to helvR08_tf etc
+  2. Adjusted graph drawing to improve negative number drawing
 
 */

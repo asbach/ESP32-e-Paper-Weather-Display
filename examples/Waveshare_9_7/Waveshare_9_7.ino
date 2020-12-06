@@ -96,7 +96,7 @@ U8G2_FOR_ADAFRUIT_GFX u8g2Fonts;  // Select u8g2 font from here: https://github.
 
 
 //################  VERSION  ##################################################
-String version = "1.1 / 9.7in";     // Programme version, see change log at end
+String version = "1.2 / 9.7in";     // Programme version, see change log at end
 //################ VARIABLES ##################################################
 
 boolean LargeIcon = true, SmallIcon = false;
@@ -359,7 +359,7 @@ void DisplayForecastWeather(int x, int y, int index) {
   display.drawLine(x, y + 40, x + fwidth - 3, y + 40, GxEPD_BLACK);
   DisplayConditionsSection(x + fwidth / 2, y + 90, WxForecast[index].Icon, SmallIcon);
   u8g2Fonts.setFont(u8g2_font_helvB14_tf);
-  drawString(x + fwidth / 2 - 10, y + 20, String(WxForecast[index].Period.substring(11, 16)), CENTER);
+  drawString(x + fwidth / 2 - 10, y + 20, String(ConvertUnixTime(WxForecast[index].Dt + WxConditions[0].Timezone).substring(0,5)), CENTER);
   drawString(x + fwidth / 2 + 0, y + 130, String(WxForecast[index].High, 0) + "°/" + String(WxForecast[index].Low, 0) + "°", CENTER);
 }
 //#########################################################################################
@@ -983,8 +983,8 @@ void Nodata(int x, int y, bool IconSize, String IconName) {
 void DrawGraph(int x_pos, int y_pos, int gwidth, int gheight, float Y1Min, float Y1Max, String title, float DataArray[], int readings, boolean auto_scale, boolean barchart_mode) {
 #define auto_scale_margin 0 // Sets the autoscale increment, so axis steps up in units of e.g. 3
 #define y_minor_axis 5      // 5 y-axis division markers
-  int maxYscale = -10000;
-  int minYscale =  10000;
+  float maxYscale = -10000;
+  float minYscale =  10000;
   int last_x, last_y;
   float x2, y2;
   if (auto_scale == true) {
@@ -1004,7 +1004,7 @@ void DrawGraph(int x_pos, int y_pos, int gwidth, int gheight, float Y1Min, float
   drawString(x_pos - 20 + gwidth / 2, y_pos - 16, title, CENTER);
   // Draw the data
   // x_pos = x_pos + 10;
-  for (int gx = 1; gx < readings; gx++) {
+  for (int gx = 0; gx <= readings; gx++) {
     x2 = x_pos + gx * gwidth / (readings - 1) - 1 ; // max_readings is the global variable that sets the maximum data that can be plotted
     y2 = y_pos + (Y1Max - constrain(DataArray[gx], Y1Min, Y1Max)) / (Y1Max - Y1Min) * gheight + 1;
     if (barchart_mode) {
@@ -1144,4 +1144,9 @@ void VerboseRecordOfResetReason(RESET_REASON reason) {
       because the event report can't be written to the not initialized display.
    Version 1.1 / 9.7in
    1. Added probability of precipitationto display e,g, 17%
+   
+   Version 1.2 / 9.7in
+   1. Adjusted graph drawing function to improve negative number drawing Line 1007
+   
+   
 */

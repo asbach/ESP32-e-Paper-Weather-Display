@@ -28,54 +28,31 @@
 #include <GxEPD2_3C.h>
 #include <U8g2_for_Adafruit_GFX.h>
 #include "forecast_record.h"
-//#include "lang.h"                   // Localisation (English)
+#include "lang.h"                   // Localisation (English)
 //#include "lang_cz.h"                // Localisation (Czech)
 //#include "lang_fr.h"                // Localisation (French)
-#include "lang_gr.h"                  // Localisation (German)
+//#include "lang_gr.h"                  // Localisation (German)
 //#include "lang_it.h"                // Localisation (Italian)
 //#include "lang_nl.h"                // Localisation (Dutch)
 //#include "lang_pl.h"                // Localisation (Polish)
 
-#define SCREEN_WIDTH   264
-#define SCREEN_HEIGHT  176
+//#define DRAW_GRID 1   //Help debug layout changes
+#define SCREEN_WIDTH   250
+#define SCREEN_HEIGHT  122
 
 enum alignmentType {LEFT, RIGHT, CENTER};
 
-static const uint8_t EPD_BUSY = 4;  // to EPD BUSY
-static const uint8_t EPD_CS   = 5;  // to EPD CS
-static const uint8_t EPD_RST  = 21; // to EPD RST
-static const uint8_t EPD_DC   = 22; // to EPD DC
-static const uint8_t EPD_SCK  = 18; // to EPD CLK
-static const uint8_t EPD_MISO = 19; // Master-In Slave-Out not used, as no data from display
-static const uint8_t EPD_MOSI = 23; // to EPD DIN
+// Connections for Lilygo TTGO T5 V2.3_2.13 from
+// https://github.com/lewisxhe/TTGO-EPaper-Series#board-pins
+static const uint8_t EPD_BUSY = 4;
+static const uint8_t EPD_CS   = 5;
+static const uint8_t EPD_RST  = 16; 
+static const uint8_t EPD_DC   = 17; //Data/Command
+static const uint8_t EPD_SCK  = 18;   //CLK on pinout?
+static const uint8_t EPD_MISO = -1; // Master-In Slave-Out not used, as no data from display
+static const uint8_t EPD_MOSI = 23;
 
-// Connections for e.g. LOLIN D32 or TTGO T5S
-//static const uint8_t EPD_BUSY = 4;  // to EPD BUSY
-//static const uint8_t EPD_CS   = 5;  // to EPD CS
-//static const uint8_t EPD_RST  = 16; // to EPD RST
-//static const uint8_t EPD_DC   = 17; // to EPD DC
-//static const uint8_t EPD_SCK  = 18; // to EPD CLK
-//static const uint8_t EPD_MISO = 19; // Master-In Slave-Out not used, as no data from display
-//static const uint8_t EPD_MOSI = 23; // to EPD DIN
-
-//static const uint8_t EPD_BUSY = 19;  // to EPD BUSY
-//static const uint8_t EPD_CS   = 17;  // to EPD CS
-//static const uint8_t EPD_RST  = 5; // to EPD RST
-//static const uint8_t EPD_DC   = 16; // to EPD DC
-//static const uint8_t EPD_SCK  = 18; // to EPD CLK
-//static const uint8_t EPD_MISO = 4; // Master-In Slave-Out not used, as no data from display
-//static const uint8_t EPD_MOSI = 23; // to EPD DIN
-
-// Connections for e.g. Waveshare ESP32 e-Paper Driver Board
-//static const uint8_t EPD_BUSY = 25;
-//static const uint8_t EPD_CS   = 15;
-//static const uint8_t EPD_RST  = 26; 
-//static const uint8_t EPD_DC   = 27; 
-//static const uint8_t EPD_SCK  = 13;
-//static const uint8_t EPD_MISO = 12; // Master-In Slave-Out not used, as no data from display
-//static const uint8_t EPD_MOSI = 14;
-
-GxEPD2_BW<GxEPD2_270, GxEPD2_270::HEIGHT> display(GxEPD2_270(/*CS=D8*/ EPD_CS, /*DC=D3*/ EPD_DC, /*RST=D4*/ EPD_RST, /*BUSY=D2*/ EPD_BUSY));
+GxEPD2_BW<GxEPD2_213_B73, GxEPD2_213_B73::HEIGHT> display(GxEPD2_213_B73(/*CS=D8*/ EPD_CS, /*DC=D3*/ EPD_DC, /*RST=D4*/ EPD_RST, /*BUSY=D2*/ EPD_BUSY));
 
 U8G2_FOR_ADAFRUIT_GFX u8g2Fonts;  // Select u8g2 font from here: https://github.com/olikraus/u8g2/wiki/fntlistall
 // Using fonts:
@@ -87,7 +64,7 @@ U8G2_FOR_ADAFRUIT_GFX u8g2Fonts;  // Select u8g2 font from here: https://github.
 // u8g2_font_helvB24_tf
 
 //################# LIBRARIES ##########################
-String version = "6.4";       // Version of this program
+String version = "1.0";       // Version of this program
 //################ VARIABLES ###########################
 
 bool    LargeIcon = true, SmallIcon = false;
@@ -98,7 +75,7 @@ int     wifi_signal, CurrentHour = 0, CurrentMin = 0, CurrentSec = 0;
 long    StartTime = 0;
 
 //################ PROGRAM VARIABLES and OBJECTS ##########################################
-#define max_readings 7
+#define max_readings 5
 
 Forecast_record_type  WxConditions[1];
 Forecast_record_type  WxForecast[max_readings];
@@ -121,9 +98,11 @@ void setup() {
   Serial.begin(115200);
   if (StartWiFi() == WL_CONNECTED && SetupTime() == true) {
     //if ((CurrentHour >= WakeupTime && CurrentHour <= SleepTime)) {
+      Serial.println("Initialising Display");
       InitialiseDisplay(); // Give screen time to initialise by getting weather data!
       byte Attempts = 1;
       bool RxWeather = false, RxForecast = false;
+      Serial.println("Attempt to get weather");
       WiFiClient client;   // wifi client object
       while ((RxWeather == false || RxForecast == false) && Attempts <= 5) { // Try up-to 2 time for Weather and Forecast data
         if (RxWeather  == false) RxWeather  = obtain_wx_data(client, "weather");
@@ -132,6 +111,7 @@ void setup() {
       }
       if (RxWeather && RxForecast) { // Only if received both Weather or Forecast proceed
         StopWiFi(); // Reduces power consumption
+        Serial.println("Displaying Weather");        
         DisplayWeather();
         display.display(false); // Full screen update mode
       }
@@ -157,50 +137,77 @@ void BeginSleep() {
   esp_deep_sleep_start();  // Sleep for e.g. 30 minutes
 }
 //#########################################################################################
-void DisplayWeather() {             // 2.7" e-paper display is 264x175 resolution
+void DisplayWeather() {             // 2.13" e-paper display is 250x122 useable resolution
+#if DRAW_GRID
+  Draw_Grid();
+#endif
   UpdateLocalTime();
   Draw_Heading_Section();           // Top line of the display
   Draw_Main_Weather_Section();      // Centre section of display for Location, temperature, Weather report, Wx Symbol and wind direction
-  Draw_3hr_Forecast(0, 102, 1);    // First  3hr forecast box
-  Draw_3hr_Forecast(44, 102, 2);    // Second 3hr forecast box
-  Draw_3hr_Forecast(88, 102, 3);   // Third  3hr forecast box
-  Draw_3hr_Forecast(132, 102, 4);   // Fourth  3hr forecast box
-  Draw_3hr_Forecast(176, 102, 5);   // Fifth 3hr forecast box
-  Draw_3hr_Forecast(220, 102, 6);   // Fifth 3hr forecast box
-  DisplayAstronomySection(0, 117); // Astronomy section Sun rise/set and Moon phase plus icon
-  if (WxConditions[0].Visibility > 0) Visibility(110, 40, String(WxConditions[0].Visibility) + "M");
-  if (WxConditions[0].Cloudcover > 0) CloudCover(110, 55, WxConditions[0].Cloudcover);
-  DrawBattery(55, 12);
+  //Gak, each forecast is about 45 wide, which means we can fit about 5.5 of them onto our 250 wide screen.
+  // Leaves us a little 25 wide gap on the right - let's see if we can find something to fill that out with.
+  //Index from 0, not 1 - gets us more useful 'near' data.
+  // For instance, indexing from 1 at 10am got us our first 3h prediction at 15:00, which is a *long* way off.
+  // Indexing from 0 made that 12:00, which is much more useful.
+  Draw_3hr_Forecast(0, 96, 0);    // First  3hr forecast box
+  Draw_3hr_Forecast(44, 96, 1);    // Second 3hr forecast box
+  Draw_3hr_Forecast(88, 96, 2);   // Third  3hr forecast box
+  Draw_3hr_Forecast(132, 96, 3);   // Fourth  3hr forecast box
+  Draw_3hr_Forecast(176, 96, 4);   // Fifth 3hr forecast box
+  DisplayAstronomySection(140, 18); // Astronomy section Sun rise/set and Moon phase plus icon
+  // Not really enough space for these
+  //if (WxConditions[0].Visibility > 0) Visibility(110, 40, String(WxConditions[0].Visibility) + "M");
+  //if (WxConditions[0].Cloudcover > 0) CloudCover(110, 55, WxConditions[0].Cloudcover);
+  DrawBattery(20, 12);
+}
+//#########################################################################################
+// Help debug screen layout by drawing a grid of little crosses
+void Draw_Grid() {
+  int x, y;
+  const int grid_step = 10;
+
+  //Draw the screen border so we know how far we can push things out
+  display.drawLine(0, 0, SCREEN_WIDTH-1, 0, GxEPD_BLACK);  //across top
+  display.drawLine(0, SCREEN_HEIGHT-1, SCREEN_WIDTH-1, SCREEN_HEIGHT-1, GxEPD_BLACK); //across bottom
+  display.drawLine(0, 0, 0, SCREEN_HEIGHT-1, GxEPD_BLACK);  //lhs
+  display.drawLine(SCREEN_WIDTH-1, 0, SCREEN_WIDTH-1, SCREEN_HEIGHT-1, GxEPD_BLACK);  //rhs
+
+  for( x=grid_step; x<SCREEN_WIDTH; x+=grid_step ) {
+    for( y=grid_step; y<SCREEN_HEIGHT; y+=grid_step ) {
+      display.drawLine(x-1, y, x+1, y, GxEPD_BLACK);  //Horizontal line
+      display.drawLine(x, y-1, x, y+1, GxEPD_BLACK);  //Vertical line
+    }
+  }
 }
 //#########################################################################################
 void Draw_Heading_Section() {
   u8g2Fonts.setFont(u8g2_font_helvB08_tf);
   //display.drawRect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,GxEPD_BLACK);
-  drawString(0, 15, City, LEFT);
+  drawString(95, 1, City, LEFT);
   drawString(0, 1, time_str, LEFT);
   drawString(SCREEN_WIDTH, 1, date_str, RIGHT);
   display.drawLine(0, 11, SCREEN_WIDTH, 11, GxEPD_BLACK);
 }
 //#########################################################################################
 void Draw_Main_Weather_Section() {
-  DisplayWXicon(182, 45, WxConditions[0].Icon, LargeIcon);
+  DisplayWXicon(117, 40, WxConditions[0].Icon, SmallIcon);
   u8g2Fonts.setFont(u8g2_font_helvB14_tf);
   drawString(3, 35, String(WxConditions[0].Temperature, 1) + "° / " + String(WxConditions[0].Humidity, 0) + "%", LEFT);
   u8g2Fonts.setFont(u8g2_font_helvB10_tf);
-  DrawWind(242, 42, WxConditions[0].Winddir, WxConditions[0].Windspeed);
-  if (WxConditions[0].Rainfall > 0.005 || WxConditions[0].Snowfall > 0.005) {
-    if (WxConditions[0].Rainfall > 0.005) drawString(150, 66, String(WxConditions[0].Rainfall, 1) + (Units == "M" ? TXT_RAINFALL_MM : TXT_RAINFALL_IN), LEFT);
-    else drawString(150, 66, String(WxConditions[0].Snowfall, 1) + (Units == "M" ? TXT_SNOWFALL_MM : TXT_SNOWFALL_IN), LEFT); // Rain has precedence over snow if both reported!
-  }
-  DrawPressureTrend(3, 52, WxConditions[0].Pressure, WxConditions[0].Trend);
+  //Squeeze in a small wind indication in the space we cannot quite squeeze a 3h prediction into
+  DrawSmallWind(230, 75, WxConditions[0].Winddir, WxConditions[0].Windspeed);
+  //Pressure just getting in the way and very small right now.
+  //DrawPressureTrend(3, 52, WxConditions[0].Pressure, WxConditions[0].Trend);
   u8g2Fonts.setFont(u8g2_font_helvB12_tf);
   String Wx_Description = WxConditions[0].Forecast0;
   if (WxConditions[0].Forecast1 != "") Wx_Description += " & " +  WxConditions[0].Forecast1;
   if (WxConditions[0].Forecast2 != "" && WxConditions[0].Forecast1 != WxConditions[0].Forecast2) Wx_Description += " & " +  WxConditions[0].Forecast2;
-  drawString(2, 67, TitleCase(Wx_Description), LEFT);
-  display.drawLine(0, 77, SCREEN_WIDTH, 77, GxEPD_BLACK);
+  drawString(2, 62, TitleCase(Wx_Description), LEFT);
+  display.drawLine(0, 72, (5 * 44), 72, GxEPD_BLACK); //Draw width of the 5 weather forcasts
 }
 //#########################################################################################
+// ? How 'big' is a weather forecast box??
+// From the lines, looks like 44 wide and 52 high?
 void Draw_3hr_Forecast(int x, int y, int index) {
   DisplayWXicon(x + 26, y, WxForecast[index].Icon, SmallIcon);
   u8g2Fonts.setFont(u8g2_font_helvB08_tf);
@@ -218,19 +225,16 @@ void Draw_3hr_Forecast(int x, int y, int index) {
 }*/
 //#########################################################################################
 void DisplayAstronomySection(int x, int y) {
-  //display.drawRect(x, y + 13, 168, 52, GxEPD_BLACK);
-  //display.drawLine(x, y + 13, x + 168, y + 13 , GxEPD_BLACK);
-  display.drawLine(x + 155, y + 13, x + 155, y + 13 + 50, GxEPD_BLACK);
   u8g2Fonts.setFont(u8g2_font_helvB08_tf);
-  drawString(x + 5, y + 18, ConvertUnixTime(WxConditions[0].Sunrise).substring(0, (Units == "M"?5:7)) + " " + TXT_SUNRISE, LEFT);
-  drawString(x + 5, y + 34, ConvertUnixTime(WxConditions[0].Sunset).substring(0, (Units == "M"?5:7)) + " " + TXT_SUNSET, LEFT);
+  drawString(x, y, ConvertUnixTime(WxConditions[0].Sunrise).substring(0, (Units == "M"?5:7)) + " " + TXT_SUNRISE, LEFT);
+  drawString(x, y + 16, ConvertUnixTime(WxConditions[0].Sunset).substring(0, (Units == "M"?5:7)) + " " + TXT_SUNSET, LEFT);
   time_t now = time(NULL);
   struct tm * now_utc = gmtime(&now);
   const int day_utc   = now_utc->tm_mday;
   const int month_utc = now_utc->tm_mon + 1;
   const int year_utc  = now_utc->tm_year + 1900;
-  drawString(x + 5, y + 50, MoonPhase(day_utc, month_utc, year_utc, Hemisphere), LEFT);
-  DrawMoon(x + 92, y, day_utc, month_utc, year_utc, Hemisphere);
+  drawString(x, y + 32, MoonPhase(day_utc, month_utc, year_utc, Hemisphere), LEFT);
+  DrawMoon(x+50, y-20, day_utc, month_utc, year_utc, Hemisphere);
 }
 //#########################################################################################
 String MoonPhase(int d, int m, int y, String hemisphere) {
@@ -296,6 +300,19 @@ void DrawMoon(int x, int y, int dd, int mm, int yy, String hemisphere) {
     display.drawLine(pW3x, pW3y, pW4x, pW4y, GxEPD_WHITE);
   }
   display.drawCircle(x + diameter - 1, y + diameter, diameter / 2, GxEPD_BLACK);
+}
+//#########################################################################################
+// Squeeze some wind info into a tiny space - just the speed, direction, and an arrow
+// No nice compass :-(
+void DrawSmallWind(int x, int y, float angle, float windspeed) {
+#define Cradius 15
+  float dx = Cradius * cos((angle - 90) * PI / 180) + x; // calculate X position
+  float dy = Cradius * sin((angle - 90) * PI / 180) + y; // calculate Y position
+  arrow(x+12, y, Cradius - 3, angle, 10, 20); // Show wind direction as just an arrow
+  u8g2Fonts.setFont(u8g2_font_helvB08_tf);
+  drawString(x, y+15, WindDegToDirection(angle), CENTER);
+  drawString(x+5, y+25, String(windspeed, 1), CENTER);  
+  drawString(x+5, y+35, String(Units == "M" ? " m/s" : " mph"), CENTER);  
 }
 //#########################################################################################
 void DrawWind(int x, int y, float angle, float windspeed) {
@@ -445,19 +462,19 @@ boolean UpdateLocalTime() {
   Serial.println(&timeinfo, "%a %b %d %Y   %H:%M:%S");      // Displays: Saturday, June 24 2017 14:05:49
   if (Units == "M") {
     if ((Language == "CZ") || (Language == "DE") || (Language == "NL") || (Language == "PL") || (Language == "GR"))  {
-      sprintf(day_output, "%s, %02u. %s %04u", weekday_D[timeinfo.tm_wday], timeinfo.tm_mday, month_M[timeinfo.tm_mon], (timeinfo.tm_year) + 1900); // day_output >> So., 23. Juni 2019 <<
+      sprintf(day_output, "%s, %02u. %s %02u", weekday_D[timeinfo.tm_wday], timeinfo.tm_mday, month_M[timeinfo.tm_mon], (timeinfo.tm_year) % 100); // day_output >> So., 23. Juni 19 <<
     }
     else
     {
-      sprintf(day_output, "%s  %02u-%s-%04u", weekday_D[timeinfo.tm_wday], timeinfo.tm_mday, month_M[timeinfo.tm_mon], (timeinfo.tm_year) + 1900);
+      sprintf(day_output, "%s  %02u-%s-%02u", weekday_D[timeinfo.tm_wday], timeinfo.tm_mday, month_M[timeinfo.tm_mon], (timeinfo.tm_year) % 100);
     }
-    strftime(update_time, sizeof(update_time), "%H:%M:%S", &timeinfo);  // Creates: '@ 14:05:49'   and change from 30 to 8 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    strftime(update_time, sizeof(update_time), "%H:%M", &timeinfo);  // Creates: '@ 14:05', 24h, no am or pm or seconds.   and change from 30 to 8 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
     sprintf(time_output, "%s", update_time);
   }
   else
   {
-    strftime(day_output, sizeof(day_output), "%a %b-%d-%Y", &timeinfo); // Creates  'Sat May-31-2019'
-    strftime(update_time, sizeof(update_time), "%r", &timeinfo);        // Creates: '@ 02:05:49pm'
+    strftime(day_output, sizeof(day_output), "%a %b-%d-%y", &timeinfo); // Creates  'Sat May-31-2019'
+    strftime(update_time, sizeof(update_time), "%H:%M", &timeinfo);        // Creates: '@ 02:05' - 24h, no seconds or am/pm
     sprintf(time_output, "%s", update_time);
   }
   date_str = day_output;
